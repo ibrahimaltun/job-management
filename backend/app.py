@@ -15,10 +15,8 @@ app.config['JWT_JSON_KEY_STRATEGY'] = lambda x: x
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-# --- CORS KESİN ÇÖZÜM ---
-# Hem localhost hem 127.0.0.1 üzerinden gelen isteklere izin veriyoruz
 CORS(app, resources={r"/*": {
-    "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://10.152.16.82:3000"],
+    "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization"]
 }}, supports_credentials=True)
@@ -39,8 +37,7 @@ def debug_db():
 def handle_preflight():
     if request.method == "OPTIONS":
         res = make_response()
-        res.headers.add("Access-Control-Allow-Origin",
-                        "http://10.152.16.82:3000")
+        res.headers.add("Access-Control-Allow-Origin", "*")
         res.headers.add("Access-Control-Allow-Methods", "*")
         res.headers.add("Access-Control-Allow-Headers", "*")
         return res, 200
@@ -71,8 +68,6 @@ def login():
         username=data['username'], password=data['password']).first()
 
     if user:
-        # 1. Identity sadece STRING (ID) olmalı
-        # 2. Diğer bilgiler 'additional_claims' içine sözlük olarak konulmalı
         additional_claims = {"role": user.role, "username": user.username}
 
         token = create_access_token(
@@ -123,8 +118,7 @@ def register():
 @app.route('/workers', methods=['GET'])
 @jwt_required()
 def get_workers():
-    # identity = get_jwt_identity()  # Bu bir dict döner
-    claims = get_jwt()  # Bu tüm claim'leri (sözlüğü) getirir
+    claims = get_jwt()
     role = claims.get('role')
 
     if role != 'leader':
@@ -139,7 +133,6 @@ def get_workers():
 @app.route('/tasks', methods=['GET'])
 @jwt_required()
 def get_tasks():
-    # identity = get_jwt_identity()
     claims = get_jwt()
     role = claims.get('role')
     user_id = claims.get('id')
@@ -151,7 +144,6 @@ def get_tasks():
 
     result = []
     for t in tasks:
-        # Lider görevlerin kime atandığını ismen de görsün diye ek bilgi ekleyebiliriz
         worker = User.query.get(t.assigned_to)
         result.append({
             "id": t.id,
@@ -166,11 +158,8 @@ def get_tasks():
 @app.route('/tasks/create', methods=['POST'])
 @jwt_required()
 def create_task():
-    # identity = get_jwt_identity()
-
     claims = get_jwt()
     role = claims.get('role')
-    # user_id = claims.get('id')
 
     if role != 'leader':
         return jsonify({"msg": "Sadece liderler görev atayabilir"}), 403
