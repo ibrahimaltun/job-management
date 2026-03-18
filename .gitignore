@@ -1,0 +1,7 @@
+# dependencies
+/backend/instance
+/backend/joms/env
+/joms-frontend/node_modules
+
+# production
+/build
